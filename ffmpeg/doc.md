@@ -298,10 +298,11 @@ ffmpeg -i input_file -acodec copy -vn output_file_audio　　//提取音频流
 输入 ffmpeg -i mpeg4.mp4 -c:v mpeg4 -f m4v video.mpeg4，即可提取.mpeg4的原始码流
 
 码流后缀：
-ivf (vp8)
+ivf (vp8/vp9/av1)
 h264
 h265
 hevc
+avs2
 m4v(mpeg4)
 
 
