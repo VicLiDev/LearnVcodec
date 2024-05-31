@@ -1,0 +1,9 @@
+[submodule "av1/aom"]
+	path = av1/aom
+	url = https://aomedia.googlesource.com/aom
+[submodule "h265/HM"]
+	path = h265/HM
+	url = https://vcgit.hhi.fraunhofer.de/jvet/HM.git
+[submodule "vp9/libvpx"]
+	path = vp9/libvpx
+	url = https://chromium.googlesource.com/webm/libvpx
