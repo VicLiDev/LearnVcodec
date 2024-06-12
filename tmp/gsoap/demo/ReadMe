@@ -1,0 +1,73 @@
+//============================================ 说明 ==================================================
+demo 来源： https://www.cnblogs.com/dkblog/archive/2011/08/19/2145942.html
+
+这里有两个文件夹，gene文件夹里的内容是通过source文件夹内的相关源码生成的
+
+gsoap使用的基本流程如下：
+1、由wsdl文件生成 *.h 文件，这一步可以省略，直接自己手写也行，这个demo就是手写的   如：demo中的 add.h 文件
+2、由 *.h 文件生成将要被调用的文件
+3、写自己的服务端程序或者客户端程序，这里需要调用第二步生成的文件   如：demo中的 addserver.c addclient.c addtest.c
+
+
+
+
+
+接下来从头开始说明gsoap的使用方法：
+//============================================ 安装 ==================================================
+自己百度
+//========================================= 生成相关文件 ===============================================
+安装完之后会有两个工具：wsdl2h 和 soapcpp2
+基本的使用方法：（具体的用法可以参考 https://blog.csdn.net/yuchunhai321/article/details/82351012）
+    wsdl2h -o outfile.h infile.wsdl   实现wsdl文件到h文件的数据映射，wsdl文件需要从相关的网站下载
+    soapcpp2 -c outfile.h   生成相应的底层通信stub，strech程序
+
+我们这里只是做demo学习，所以省略wsdl2h的步骤，我们直接自己定义一个头文件，头文件存放在source文件夹下，名称为 add.h
+然后执行：soapcpp2 -c add.h 生成相关的文件
+
+//==================================== 调用相关的接口，写自己的程序 =======================================
+这里已经有写好的文件放在source文件夹下，名称为 addserver.c addclient.c addtest.c
+
+//============================================ 编译 ==================================================
+首先需要从安装gsoap时使用的源码中找到 stdsoap2.h stdsoap2.c ，并将其放在当前目录下，编译的时候需要用，源码中的路径为： gsoap-2.8/gsoap
+
+生成服务端：
+gcc -o ser addserver.c soapServer.c soapC.c soapStub.h stdsoap2.c
+生成客户端：
+gcc -o cli addtest.c addclient.c soapClient.c soapC.c soapStub.h stdsoap2.c
+
+//============================================ 使用 ==================================================
+让server跑起来,执行: ./addserver 6666
+运行客户端: ./addtest ip:port num1 num2，返回加法的结果
+
+
+//========================================== 程序说明 ================================================
+参考博客： https://blog.csdn.net/dgyanyong/article/details/39925523
+
+//-- 在服务端中：
+我们在add.h中只声明了一个函数(ns2__add)，生成相关文件之后，他的实体在addserver.c中由我们自己编写，在这里会多一个struct soap 形参，
+这是soap的全局运行环境，所有的函数都在第一个形参的位置包含这个结构体，而该函数(ns2__add)的真正声明是在自动产生的soapStub.h中：
+/******************************************************************************\
+ *                                                                            *
+ * Server-Side Operations                                                     *
+ *                                                                            *
+\******************************************************************************/
+
+    /** Web service operation 'ns2__add' implementation, should return SOAP_OK or error code */
+    SOAP_FMAC5 int SOAP_FMAC6 ns2__add(struct soap*, int num1, int num2, int *sum);
+然后在自动产生的soapServer.c中被soap_serve_ns2_add()函数调用。这样，就将真正的加法运算的ns2_add函数和soap代码框架联系了起来。
+
+
+
+//-- 在客户端中：
+我们在addclient.c中添加一个add函数，它把客户端的调用和soap联系了起来，这里的soap_init()和soap_end()来自stdsoap2.h和stdsoap2.c
+stdsoap2提供了soap协议的简单操作，只需要简单的函数调用就能完成远程的函数调用。注意soap_call_ns2_add()，同样在soapStub.h中声明:
+/******************************************************************************\
+ *                                                                            *
+ * Client-Side Call Stub Functions                                            *
+ *                                                                            *
+\******************************************************************************/
+
+    
+    /** Web service synchronous operation 'soap_call_ns2__add' to the specified endpoint and SOAP Action header, returns SOAP_OK or error code */
+    SOAP_FMAC5 int SOAP_FMAC6 soap_call_ns2__add(struct soap *soap, const char *soap_endpoint, const char *soap_action, int num1, int num2, int *sum);
+这个函数的实现在自动产生的soapClient.c源文件中，不需要我们实现。

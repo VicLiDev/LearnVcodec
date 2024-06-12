@@ -1,0 +1,127 @@
+参考博客： https://blog.csdn.net/u010871058/article/details/71403962
+
+//============================================ 生成头文件  ============================================
+//-- 在线生成头文件
+先将gsoap源码路径下的 gsoap-2.8/gsoap/typemap.dat 复制到当前工作路径，然后执行：
+wsdl2h -o onvif.h -c -s -t ./typemap.dat http://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl http://www.onvif.org/onvif/ver10/media/wsdl/media.wsdl http://www.onvif.org/onvif/ver10/event/wsdl/event.wsdl http://www.onvif.org/onvif/ver10/display.wsdl http://www.onvif.org/onvif/ver10/deviceio.wsdl http://www.onvif.org/onvif/ver20/imaging/wsdl/imaging.wsdl http://www.onvif.org/onvif/ver20/ptz/wsdl/ptz.wsdl http://www.onvif.org/onvif/ver10/receiver.wsdl http://www.onvif.org/onvif/ver10/recording.wsdl http://www.onvif.org/onvif/ver10/search.wsdl http://www.onvif.org/onvif/ver10/network/wsdl/remotediscovery.wsdl http://www.onvif.org/onvif/ver10/replay.wsdl http://www.onvif.org/onvif/ver20/analytics/wsdl/analytics.wsdl http://www.onvif.org/onvif/ver10/analyticsdevice.wsdl http://www.onvif.org/ver10/actionengine.wsdl http://www.onvif.org/ver10/pacs/accesscontrol.wsdl http://www.onvif.org/ver10/pacs/doorcontrol.wsdl
+
+整理以上命令的链接：
+    http://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl
+    http://www.onvif.org/onvif/ver10/media/wsdl/media.wsdl
+    http://www.onvif.org/onvif/ver10/event/wsdl/event.wsdl
+    http://www.onvif.org/onvif/ver10/display.wsdl
+    http://www.onvif.org/onvif/ver10/deviceio.wsdl
+    http://www.onvif.org/onvif/ver20/imaging/wsdl/imaging.wsdl
+    http://www.onvif.org/onvif/ver20/ptz/wsdl/ptz.wsdl
+    http://www.onvif.org/onvif/ver10/receiver.wsdl
+    http://www.onvif.org/onvif/ver10/recording.wsdl
+    http://www.onvif.org/onvif/ver10/search.wsdl
+    http://www.onvif.org/onvif/ver10/network/wsdl/remotediscovery.wsdl
+    http://www.onvif.org/onvif/ver10/replay.wsdl
+    http://www.onvif.org/onvif/ver20/analytics/wsdl/analytics.wsdl
+    http://www.onvif.org/onvif/ver10/analyticsdevice.wsdl
+    http://www.onvif.org/ver10/actionengine.wsdl
+    http://www.onvif.org/ver10/pacs/accesscontrol.wsdl
+    http://www.onvif.org/ver10/pacs/doorcontrol.wsdl
+
+注意，这种方式的话一定要保证您的虚拟机能出外网，简单说就是在虚拟机下能ping通百度或者其他外网地址；而且要保证网络比较快，否则在生成过程中会出现下载文件超时而导致生成头文件失败。该方式生成的话，所有文件均是在线实时下载。
+
+//-- 离线生成头文件 当前路径下wsdl文件夹内的文件可能会不全，最好自己重新下载
+wsdl2h -o onvif.h -c -s -t ./typemap.dat devicemgmt.wsdl media.wsdl event.wsdl display.wsdl deviceio.wsdl imaging.wsdl ptz.wsdl receiver.wsdl recording.wsdl search.wsdl remotediscovery.wsdl replay.wsdl analytics.wsdl analyticsdevice.wsdl actionengine.wsdl accesscontrol.wsdl doorcontrol.wsdl
+
+整理以上wsdl文件：
+    devicemgmt.wsdl
+    media.wsdl
+    event.wsdl
+    display.wsdl
+    deviceio.wsdl
+    imaging.wsdl
+    ptz.wsdl
+    receiver.wsdl
+    recording.wsdl
+    search.wsdl
+    remotediscovery.wsdl
+    replay.wsdl
+    analytics.wsdl
+    analyticsdevice.wsdl
+    actionengine.wsdl
+    accesscontrol.wsdl
+    doorcontrol.wsdl
+
+目前Onvif官网提供的最新的WSDL文件一共有17个，可以将其下载下来。不过这些文件直接都是相互关联的，下载的话，除了这17个文件之外，还要下载所有相关联的文件。另外，下载之后，还需要更改文件中的路径，将wsdl文件中的schemaLocation以及location所指的路径进行修改，修改为本地的地址。将所有需要下载的文件下载到onvif_new目录，并修改相关地址。当然如果网速够快，提倡直接在线生成头文件和源文件。另外为了避免后续开发过程中出现某些功能的缺省，最好一次性生成包含所有功能的代码。
+
+//============================================ 生成源文件  ============================================
+生成onvif.h头文件之后，即可根据soapcpp2命令生成C源文件或者CPP源文件。命令为：
+soapcpp2 -c onvif.h -x -I import路径 -I gsoap路径
+例如：soapcpp2 -c onvif.h -x -I /home/samba/onvif-2013.08.05/gsoap_2.8.15/ gsoap-2.8/gsoap/import -I /home/samba/onvif-2013.08.05/gsoap_2.8.15/gsoap-2.8/gsoap/
+这里可能会遇到一个版本兼容的问题：
+wsa5.h(289): **ERROR**: service operation name clash: struct/class 'SOAP_ENV__Fault' already declared at wsa.h:274
+原因及解决方法：(https://sourceforge.net/p/gsoap2/bugs/999/)
+    This is not a bug, it is caused by a WS-Addressing version mismatch.
+    Please see the imported file dependencies:
+    #import "wsa.h" (imported via wsdd10.h) is not compatible with #import "wsa5.h" and will lead to a redefinition.
+    Replace "wsdd10.h" with "wsdd.h" in onvif.h.
+    This will upgrade the WSDD protocol to 2009. If that is a problem, you will need to change "wsdd10.h" to import "wsa5.h" and change all occurrences of wsa__ to wsa5__.
+    For convenience, a wsdd5.h import will be included in the upcoming release, so you can simply choose between wsdd5.h (which imports wsa5.h) and wsdd10.h (which imports wsa.h).
+
+可以看到，这次可以成功执行命令，在当前目录下可以看到生成的源文件以及不同功能所对应的命名空间。然后我们可以在新生成的源码上面进行开发。也许有人会觉得代码量很大，没关系，我们后续可以裁剪。另外，为了保证onvif所有的功能都包括在里面，我们必须在最开始开发的时候就生成包含所有功能的文件。
+
+//========================================== demo(未完善)  ==========================================
+已经生成的框架可以将无用的文件删除： （参考博客：https://blog.csdn.net/hbuxiaofei/article/details/44116755）
+1.修改wsdd.nsmap文件名为wsdd.h（也可以不改名），删掉其他所有的nsmap文件(rm *.nsmap)，命令空间文件文件都差不多，保留一个即可，需要的时候包含此文件就好
+2.直接删除soapClientLib.c和soapServerLib.c文件，在开发过程中没有实际用处
+3.将gsoap-2.8.14/gsoap-2.8/gsoap下的stdsoap2.h和stdsoap2.c文件和gsoap-2.8.14/gsoap-2.8/gsoap/custom下的duration.c和duration.h文件都拷贝到当前目录下
+4.如果是作客户端的开发的话，则删掉soapServer.c文件，不然的话，里面调用的很多接口只是写了申明了函数原型，而没有实现，需要服务端开发来实现的，服务端比客户端多一个soapServer.c文件
+
+//---- vim 操作
+vim删除指定行：
+    删除含有string的行：
+    ：% g/string/d
+    删除以/**开头的行：
+    ：% g/\/\*\*/d
+vim替换当前行中的内容：
+    将当前行第一个from替换为to:
+    :s/from/to/
+    将当前行所有from替换为to:
+    :s/from/to/g
+    将当前行所有from替换为to，但每次替换都询问:
+    :s/from/to/g
+vim替换某一行的内容：
+    在当前行进行替换操作：
+    :.s/from/to/g
+    在第33行进行替换操作：
+    :33s/from/to/g
+    在最后一行进行替换操作：
+    :$s/from/to/g
+替换某些行的内容：
+    对第10行到第20行的内容进行替换：
+    :10,20s/from/to/g
+    对第1行到最后一行的内容进行替换：
+    :1,$s/from/to/g
+    对第1行到当前行的内容进行替换：
+    :1,.s/from/to/g
+    对当前行到最后一行的内容进行替换：
+    :.,$s/from/to/g
+    对标记a和标记b之间的行(包含两端)内容进行替换，其中a和b是用m命令所做的标记：
+    :'a,'bss/from/to/g
+替换所有行的内容：
+    :% s/from/to/g
+
+//---- 服务端
+将../../demo中的 addserver.c 直接复制过来，如果直接编译的话会出现很多 undefined reference to 错误，原因是
+在 soapStub.h 文件中声明的函数没有实现。所以将 soapStub.h 文件中以下标签开始的所有函数复制到服务端程序中(这里
+是 addserver.c)进行实现
+/******************************************************************************\
+ *                                                                            *
+ * Server-Side Operations                                                     *
+ *                                                                            *
+\******************************************************************************/
+返回参数部分(SOAP_FMAC5 int SOAP_FMAC6) 只保留 int 即可，没有用到的函数就只将声明最后的“;"换为{}即可
+另外声明中struct *soap 没有形参，需要使用查找替换的方法进行替换
+
+addserver.c去掉包含文件 add.nsmap ，添加包含文件 wsdd.nsmap
+
+编译：
+gcc -o ser addserver.c soapServer.c soapC.c stdsoap2.c
+
+//---- 客户端

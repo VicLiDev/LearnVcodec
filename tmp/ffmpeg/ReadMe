@@ -1,0 +1,106 @@
+不错的ffmpeg教程:
+https://blog.csdn.net/guyuealian/article/details/79493019
+https://blog.csdn.net/doublefi123/article/details/24325159
+https://blog.csdn.net/leixiaohua1020/article/details/11693997
+https://blog.csdn.net/leixiaohua1020/article/details/15811977
+https://wenku.baidu.com/view/296eefcaf90f76c661371af1.html
+https://github.com/feixiao/ffmpeg
+
+
+###############################################<安装配置>############################################
+
+ubuntu 安装ffmpeg，步骤以及问题解决方案
+https://blog.csdn.net/lwsas1/article/details/51131626
+
+还可以参考
+https://blog.csdn.net/redstarofsleep/article/details/45092145
+
+遇到过一个pkg-config没有libavdevice和libavfilter的问题
+配置的时候直接 ./configure 就可以解决
+
+遇到一个库的问题
+ffmpeg: error while loading shared libraries: libavdevice.so.58: cannot open shared object file: No such file or directory
+解决方法:https://blog.csdn.net/qq_39436605/article/details/82755588
+
+遇到没有h264编码器的问题:
+使用./config --help | grep 264  可以看到h264是需要依赖系统中的库才能进行编码,所以需要系统预装h264的库,并且在配置(./config)时添加--enable-libx264.与此类似的还可以发现别的编码器或者相关功能也有类似的特点,可以通过./config --help 查看.
+在配置的过程中发现添加--prefix=/usr/loacl/ffmpeg会造成无法找到一个库的问题.尚不清楚具体原因,但可以通过去掉这一项配置解决这个问题.
+
+最后使用的配置:
+./configure  --enable-gpl --enable-version3 --enable-nonfree --enable-postproc --enable-pthreads  --enable-libmp3lame --enable-libtheora --enable-libx264 --enable-libxvid  --enable-libvorbis
+
+###############################################<推流抓流>############################################
+
+/***********************通过指令*********************/
+//===推流可以参考的指令  (多使用ffmpeg -h 查看使用方法)
+https://www.cnblogs.com/xianrou/p/6328209.html
+ffmpeg [global_options] {[input_file_options] -i input_url} ... {[output_file_options] output_url} ...
+
+测试过的推流抓流
+推流:ffmpeg -re -i /dev/video0 -vcodec mpeg2video -f mpeg2video udp://127.0.0.1:6666
+抓流:ffplay -vcodec mpeg2video udp://127.0.0.1:6666
+
+//===ffmpeg ffserver 作为rtsp服务器
+注意:这种方法已经不能使用,https://superuser.com/questions/1296377/why-am-i-getting-an-unable-to-find-a-suitable-output-format-for-http-localho 有趣缺少感兴趣的用户,ffserver已经取消
+https://blog.csdn.net/hoyjam1/article/details/51281679
+https://blog.csdn.net/mengzhengjie/article/details/45025179
+默认的ffserver.conf文件在/etc/ffserver.conf
+
+可用指令:
+推流:ffmpeg -re -f video4linux2 -framerate 30 -i /dev/video0 -vcodec copy -f mpeg2video udp://127.0.0.1:8090/feed1.ffm
+
+//===使用nginx-rtmp服务器
+环境搭建:https://www.ctolib.com/topics-119748.html  注意配置过程中还需要加入--with-http_flv_module --with-http_mp4_module 不然无法识别flv和mp4
+使用以上方法搭建环境之后需要使用:https://www.jianshu.com/p/93c5a418426e  进行进一步配置,但是配置文件在/etc/nginx/nginx.conf,直接使用第二个链接的方法也可以实现,可以仔细阅读第一个链接存在的原因.
+如果有错误可以使用: sudo nginx -t 测试配置文件的问题
+推流摄像头:ffmpeg -re -i /dev/video0 -vcodec h264 -f flv rtmp://192.168.1.5:1935/hls  (这里的hls是nginx.conf配置文件中rtmp部分的application后边的内容,如果推流视频把/dev/video0改为视频路径就行,测试过.mp4格式的)
+同时推多个视频的方法:只要在ffmpeg推流指令的链接最后再加上一个文件名就可以,这里对格式没有要求,例如:rtmp://192.168.1.5:1935/hls/test1
+
+/***********************通过程序*********************/
+
+推流可以参考的程序
+https://blog.csdn.net/shizheng163/article/details/80475927
+
+使用librtmp推流/拉流:https://blog.csdn.net/gongluck93/article/details/79126801
+
+本目录下的push.cpp和pull.cpp分别是推流和拉流程序,测试过是可用的,需要注意的是我自己推的流无法正常使用pull.cpp程序拉回来,但是使用在https://www.jianshu.com/p/20f9e9bb89aa找到的一个mp4文件是可以正常拉流的,目前还没有找到原因.
+
+本目录下的ffmpeg_opencv.cpp是可用的拉流程序,并且将拉回来的图像流转换成opencv的mat数据
+
+本目录下的 simplest_ffmpeg_player.c 来源：https://blog.csdn.net/leixiaohua1020/article/details/38868499
+可以用作播放rtsp视频或者本地视频
+
+
+###############################################<基础知识>############################################
+
+FFmpeg 基础知识
+基础术语
+	容器(Container)
+		一种文件格式，比如flv，mkv等。包含下面5种流以及文件头信息。
+	流(Stream)
+		一种视频数据信息的传输方式，5种流：音频，视频，字幕，附件，数据。
+	帧(Frame)
+		帧代表一幅静止的图像，分为I帧，P帧，B帧。
+	编解码器(Codec)
+		是对视频进行压缩或者解压缩，CODEC = COde（编码） +DECode（解码）。
+	复用/解复用(mux/demux)
+		把不同的流按照某种容器的规则放入容器，这种行为叫做复用（mux）。
+		把不同的流从某种容器中解析出来，这种行为叫做解复用(demux)。
+	帧率
+		帧率也叫帧频率，帧率是视频文件中每一秒的帧数，肉眼想看到连续移动图像至少需要15帧。
+	码率
+		比特率(也叫码率，数据率)是一个确定整体视频/音频质量的参数，秒为单位处理的字节数，码率和视频质量成正比，在视频文件中中比特率用bps来表达。
+
+简介
+	FFmpeg的名称来自MPEG视频编码标准，前面的“FF”代表“Fast Forward”，FFmpeg是一套可以用来记录、转换数字音频、视频， 并能将其转化为流的开源计算机程序。 可以轻易地实现多种视频格式之间的相互转换。包括如下几个部分：
+	libavformat：用于各种音视频封装格式的生成和解析，包括获取解码所需信息以生成解码上下文结构和读取音视频帧等功能，包含demuxers和muxer库。
+	libavcodec：用于各种类型声音/图像编解码。
+	libavutil：包含一些公共的工具函数。
+	libswscale：用于视频场景比例缩放、色彩映射转换。
+	libpostproc：用于后期效果处理。
+	ffmpeg：是一个命令行工具，用来对视频文件转换格式，也支持对电视卡实时编码。
+	ffsever：是一个HTTP多媒体实时广播流服务器，支持时光平移。
+	ffplay：是一个简单的播放器，使用ffmpeg 库解析和解码，通过SDL显示。
+	ffprobe：收集多媒体文件或流的信息，并以人和机器可读的方式输出。
+参考资料
+《FFmpeg基础》

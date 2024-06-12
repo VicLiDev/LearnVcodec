@@ -1,0 +1,355 @@
+参考博客： https://blog.csdn.net/benkaoya/article/details/72424335
+对应的demo已经放在当前路径下，windows平台可以直接编译执行，Linux需要自己处理ffmpeg库和openssl库，具体方法如下：
+修改项目根目录下的Makefile.inc文件：
+	OPENSSL_DIR = /usr
+	FFMPEG_DIR = /usr/local
+	注意：这里由于 openssl 的库是存放在 /usr/lib/x86_64-linux-gnu/下，所以建立软链接：
+		sudo ln -s /usr/lib/x86_64-linux-gnu/libssl.a .
+		sudo ln -s /usr/lib/x86_64-linux-gnu/libcrypto.a .
+
+//************************************************** onvifDemo **************************************************
+//================================================= 安装gsoap工具 ================================================
+//---- 版本说明
+这里与作者建议一致，使用版本为 gsoap_2.8.45， 如果使用其他版本可能会需要修改源码中的 typemap.dat 文件，参考「How do I use gSOAP with the ONVIF specifications」(https://www.genivia.com/resources.html)说明，看是否需要修改typemap.dat。
+
+//---- 编译安装
+$ ./configure --with-openssl=/usr/local/ssl   要留意这里的路径指定是否有问题，我这里错误指定了路径，但是同样打印显示找到了相关的ssl文件，可能的原因是跟安装openssl的方式有关
+$ make
+$ make install
+
+出现问题： 这里可能会出现找不到xlocale.h 头文件的问题： linux xlocale.h: No such file or directory
+解决方法： ln -s /usr/include/locale.h /usr/include/xlocale.h
+
+//=================================================== 生成框架 ===================================================
+//---- 生成onvif.h
+
+将gsoap源码中的 gsoap/custom目录 gsoap/import目录 stdsoap2.c stdsoap2.h typemap.dat 复制到当前路径下。
+
+执行如下指令生成onvif.h
+wsdl2h -P -x -c -s -t ./typemap.dat -o samples/onvif/onvif.h https://www.onvif.org/ver10/network/wsdl/remotediscovery.wsdl https://www.onvif.org/ver10/device/wsdl/devicemgmt.wsdl https://www.onvif.org/ver10/media/wsdl/media.wsdl
+
+//---- 生成相关文件
+
+因「鉴权（认证）」需要，修改onvif.h头文件：
+有些ONVIF接口调用时需要携带认证信息，要使用soap_wsse_add_UsernameTokenDigest函数进行授权，所以要在onvif.h头文件开头加入 #import "wsse.h"
+如果onvif.h不加入#import "wsse.h"，使用soap_wsse_add_UsernameTokenDigest函数会导致编译出错（错误信息如下)：
+wsse2api.c(183): error C2039: “wsse__Security”: 不是“SOAP_ENV__Header”的成员
+
+使用soapcpp2工具，根据头文件产生框架代码：
+soapcpp2 -2 -C -L -c -x -I import -I custom -d . onvif.h
+
+根据不同的gSOAP版本，这个过程你可能会遇到这样的错误：
+wsa5.h(288): **ERROR**: service operation name clash: struct/class 'SOAP_ENV__Fault' already declared at wsa.h:273
+之所有会出现这个错误，是因为onvif.h头文件中同时：
+#import "wsdd10.h" // wsdd10.h中又#import "wsa.h"
+#import "wsa5.h"   // wsa.h和wsa5.h两个文件重复定义了int SOAP_ENV__Fault
+解决方法：修改import\wsa5.h文件，将int SOAP_ENV__Fault修改为int SOAP_ENV__Fault_alex，再次使用soapcpp2工具编译就成功了
+
+//---- 删除无用的文件
+
+custom文件夹
+import文件夹
+除了wsdd.nsmap之外的nsmap文件
+onvif.h
+typemap.dat
+soapClientLib.c
+
+//---- 拷贝其他还有会用的源码
+cp stdsoap2.c stdsoap2.h 
+plugin/wsaapi.c plugin/wsaapi.h 
+plugin/wsseapi.c plugin/wsseapi.h 
+plugin/smdevp.c plugin/smdevp.h 
+plugin/mecevp.c plugin/mecevp.h 
+plugin/threads.c plugin/threads.h 
+custom/duration.c custom/duration.h
+dom.c  .
+
+//---- 关联自己的命名空间，修改stdsoap2.c文件
+在samples\onvif\stdsoap2.h中有命名空间「namespaces变量」的定义声明，如下所示：
+extern SOAP_NMAC struct Namespace namespaces[];
+但「namespaces变量」的定义实现，是在wsdd.nsmap文件中，为了后续应用程序要顺利编译，修改stdsoap2.c文件，在开头加入：
+#include "wsdd.nsmap"
+当然，你可以在其他源码中（更上层的应用程序源码）include，我这里是选择在stdsoap2.c中include
+
+1.geneFramework 文件夹中为按上述步骤生成的框架
+
+//=================================================== 搜索设备 ===================================================
+要访问一个IPC摄像头，或者说要调用IPC摄像头提供的WEB服务接口，就要先知道其IP地址，这就是「设备发现」的过程，或者叫「设备搜索」的过程。ONVIF规范并没有自己定义服务发现框架，而是复用了已经很成熟的WS-Discovery标准，WS-Discovery 协议使得服务能够被客户端发现。
+
+//---- WS-Discovery原理
+
+WS-Discovery：全称Web Services Dynamic Discovery。
+官方技术规范：http://docs.oasis-open.org/ws-dd/discovery/1.1/os/wsdd-discovery-1.1-spec-os.html
+
+我们传统的Web Services服务调用的模式都是这样的：客户端在设计时就预先知道目标服务的地址（IP地址或者域名），客户端基于这个地址进行服务调用。那如果客户端预先不知道目标服务的地址该怎么办？
+
+WS-Discovery（全称为Web Services Dynamic Discovery）标准就是用于解决该问题的，遵循该标准，客户端预先不知道目标服务地址的情况下，可以动态地探测到可用的目标服务，以便进行服务调用。这个过程就是「设备发现」的过程。
+
+WS-Discovery定义了两种模式：Ad hoc模式和Managed模式。
+
+    Ad hoc模式：客户端以多播(multicast)的形式往多播组(multicast group)发送一个Probe（探测）消息搜寻目标服务，在该探测消息中，包含相应的搜寻条件。如果目标服务满足该条件，则直接将响应ProbeMatch消息（服务自身相关的信息，包括地址）回复给客户端。
+
+    Managed模式：即代理模式。Ad hoc模式有个局限性，只能局限于一个较小的网络。Managed模式就是为了解决这个问题的，在Managed模式下，一个维护所有可用目标服务的中心发现代理（Discovery Proxy）被建立起来，客户端只需要将探测消息发送到该发现代理就可以得到相应的目标服务信息。
+
+//---- 单播、多播（组播）和广播的区别
+在IPv6领域还有另一种方式：任播(Anycast)
+
+	单播(Unicast)：一对一，双向通信，目的地址是对方主机地址。网络上绝大部分的数据都是以单播的形式传输的。如收发邮件、浏览网页等。
+
+	广播(Broadcast)：一对所有，单向通信，目的地址是广播地址，整个网络中所有主机均可以收到（不管你是否需要），如ARP地址解析、GARP数据包等。广播会被限制在局域网范围内，禁止广播数据穿过路由器，防止广播数据影响大面积的主机。
+
+	多播(Multicast)：也叫组播，一对多，单向通信，目的地址是多播地址，主机可以通过IGMP协议请求加入或退出某个多播组(multicast group)，数据只会转发给有需要（已加入组）的主机，不影响其他不需要（未加入组）的主机。如网上视频会议、网上视频点播、IPTV等。
+
+//---- 设备搜索
+搜索IPC有两种搜索方式：
+    1. 自己实现socket编程（UDP），通过sendto往多播地址发送探测消息（Probe），再使用recvfrom接收IPC的应答消息（ProbeMatch）。
+    2. 根据ONVIF标准的remotediscovery.wsdl文档，使用gSOAP工具快速生成框架代码，直接调用其生成的函数接口来搜索IPC。
+
+从原理上来说，这两种方式归根结底是一样的，都是WS-Discovery协议，方式1是自己造轮子（自己码代码），方式2是利用gSOAP快速生成代码。在项目中肯定是要用方式2，之所以要介绍方式1，是为了让大家对搜索IPC的原理、过程有个更深刻的认识。
+
+//---- 搜索IPC（方式1）
+直接看代码，如下所示，这里需要说明几点：
+
+    1. 这份代码在linux和Windows下都可以使用，其他平台没测过。
+
+    2. 设备发现的多播地址为239.255.255.250，端口3702。
+
+    3. 从技术层面来说，通过单播、多播、广播三种方式都能探测到IPC，但多播最具实用性。单播得预先知道IPC的地址（那还搜索啥子嘛），没有实用性。多播是ONVIF规定的方式，能搜多到多播组内的所有IPC。广播能搜索到局域网内的所有IPC，但涉及广播风暴的问题，不推荐。
+
+    4. const char *probe变量的内容，即探测消息(Probe)的内容，是ONVIF Device Test Tool 15.06工具搜索IPC时通过Wireshark抓包工具抓包到的。
+
+    5. 从实际执行结果来看，探测到的应答信息都是一堆SOAP协议数据包，一堆XML要自己解析，实用性极差，所以这种方式知道下就好，不要在项目使用。
+
+//---- 搜索IPC（方式2）
+这才是我们项目开发中要用到的方式，我们需要用到ONVIF框架代码，如何使用gSOAP生成ONVIF框架代码在专栏前面的文章已经提到了，此次不再赘述。这里直接把 1.geneFramework 的内容拷贝过来。
+
+直接看代码，附加几点说明：
+
+    头文件onvif_dump.h是作者自己封装的代码，仅仅用于打印IPC应答的数据结构体信息。可以在该路径下的代码包里找到。
+
+    搜索时必须指定设备类型为「dn:NetworkVideoTransmitter」，否则将搜索不到IPC，该值的来源请参考「ONVIF Profile S Specification」（https://www.onvif.org/profiles/profile-s/），看Types章节说明，如下所示（摘自ONVIF Profile S Specification Version 1.1.1版本）：
+
+        9.1 Types
+        Section “Discovery definitions” of the ONVIF Core Specification defines a generic tds:Device for
+        the 
+
+这里编译遇到了问题：
+1. 需要将onvif_dump.c文件中的 va_start 函数行和 va_end 函数行注释掉，不清楚会不会带来不好的影响
+    补充：程序崩溃即是由于注释掉那两行引起的，正确的做法是在 comm/onvif_dump.h文件中包含头文件： #include <stdarg.h>
+2. 在 stdsoap2.h 文件中加入 #define WITH_OPENSSL
+
+
+//===================================================== 鉴权 =====================================================
+在测试ONVIF标准的GetDeviceInformation接口时，有些IPC要求鉴权（认证），有些IPC不需要。其实总结起来应该是这样：
+    1. ONVIF规定，有些接口需要鉴权，有些接口不需要鉴权（在哪里查询等下会说明）。ONVIF规定GetDeviceInformation接口是需要鉴权的。
+    2. 市面上的IPC摄像头，特别是山寨货，并没有严格按ONVIF规范执行，造成对于有的IPC，客户端不携带鉴权信息也能成功调用GetDeviceInformation接口。
+
+//---- ONVIF哪些接口需要认证
+那么，问题来了，哪些ONVIF接口需要鉴权，哪些不需要鉴权，在哪里可以查看呢？答案是，在官网的ONVIF Core Specification文档中有详细的规定，如Version 16.12 的版本为 《ONVIF-Core-Specification-v1612.pdf》（已在当前路径存放）。在该文档的「Access classes for service requests」 章节中有接口访问权限的相关规定。比如「PRE_AUTH」的规定是：The service shall not require user authentication，那非「PRE_AUTH」的就是都要认证的。
+拿GetServices接口举个例子，在ONVIF Core Specification文档中找到GetServices接口定义，会有Access Class: PRE_AUTH 的说明， 表明客户端调用该接口时， 不需要携带用户名、 密码认证信息。再看看GetDeviceInformation接口规定，Access Class: READ_SYSTEM，说明客户端调用该接口是需要进行认证。
+
+//---- 如何认证
+这里的鉴权信息包括用户名、密码，在HTTP传输过程中不能是明文，有一定的加密算法。
+如果你整不清楚这个加密算法怎么回事，那么，我推荐利用gSOAP源码中的 soap_wsse_add_UsernameTokenDigest 函数，可以轻松实现鉴权。要使用该函数，需要注意以下几点：
+    就像专栏前面文章提到过的一样，要使用soap_wsse_add_UsernameTokenDigest函数进行授权，在soapcpp2 生成ONVIF代码框架之前，要在onvif.h头文件开头加入：
+        #import “wsse.h”
+    依赖gSOAP中的这些源码：wsseapi.c、wsseapi.h、mecevp.c、mecevp.h、smdevp.c、smdevp.h、threads.c、threads.h、dom.c，这些文件在gsoap目录和gsoap/plugin目录下，将这些文件拷贝到你的项目中，以便参与编译。
+    在加入上面说的.c和.h文件后，结果编译失败，提示找不到「openssl/evp.h」文件：
+        smdevp.h(54): fatal error C1083: 无法打开包括文件:“openssl/evp.h”: No such file or directory
+    究其原因，wsse系列函数依赖OpenSSL库，我们得去OpenSSL官网下载源代码来编译、安装，里面有我们需要的库文件和头文件。
+
+//---- 特别注意
+需要特别、特别、特别注意的是：但凡是ONVIF规定要鉴权的接口，每次调用之前，都要重新设置一次鉴权信息（即调用ONVIF_SetAuthInfo函数），哪怕你之前已经设置过鉴权信息了，否则后续调用ONVIF接口依然会报错。
+之所以会如此，究其根源，是因为IPC的应答信息会重置soap对象，导致鉴权信息丢失，所示每次都要重新设置鉴权信息。
+
+
+//==================================================== 设备校时 ====================================================
+//---- 编码流程
+ONVIF标准中，有 GetSystemDateAndTime和SetSystemDateAndTime两个接口用于获取、设置IPC的系统时间。接口使用大致流程：
+    1. 搜索出IPC，得到IPC的「设备服务地址」。
+    2. 根据「设备服务地址」，调用GetSystemDateAndTime和SetSystemDateAndTime接口。
+
+//---- 注意事项
+使用GetSystemDateAndTime和SetSystemDateAndTime这两个接口本是简单的事情，但是有一个细节需要注意，以SetSystemDateAndTime为例，看以上截图（来源于https://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl），其中两个字段：
+    TimeZone - 时区
+    时区字符串要符合POSIX 1003.1格式，如GMT+00:00、GMT+08:00、GMT-03:30等。
+    UTCDateTime - UTC时间
+    该字段要填充UTC时间，不是本地时间，不要搞错了。
+IPC摄像头视频中显示的OSD时间，是本地时间，不是UTC时间，而本地时间跟「时区」息息相关。如果你设置了时间，视频OSD显示的时间又不是你预期的，就要注意这里面的关系了。
+
+简单介绍下有关UTC的基础知识：
+    UTC + 时区差 = 本地时间
+时区差，东正西负，北京时区是东八区，领先UTC八个小时，时区差记为+0800，所以
+    UTC + (＋0800) = 北京时间
+UTC与格林尼治平均时(GMT, Greenwich Mean Time)一样，都与英国伦敦的本地时相同。为了简单起见，可以认为UTC与GMT含义是一样的。
+
+//---- 遇到的问题
+这里我使用自己的模组时如果时区是GMT+08:00， 那校准之后摄像头的时间相比GMT时间少了8小时，反而时区设置成GMT-08:00就正常了，怀疑是模组的问题。
+
+
+//==================================================== 设备能力 ====================================================
+//---- 原理简介
+ONVIF协议接口由多个模块组成，每个模块分别对应着不同的WSDL文档，在ONVIF官网中能查看到这些模块，以及每个模块中的接口函数，这里列举几个模块：
+    DeviceMgmt（设备管理）
+    DeviceIO（设备IO服务）
+    Event（事件处理）
+    Analytics（视频分析）
+    AnalyticsDevice（分析设备）
+    Display（显示服务）
+    Imaging（图像配置）
+    Media（媒体配置）
+    PTZ（PTZ控制）
+    Receiver（接收端配置）
+    RemoteDiscovery（设备发现）
+    Recording（录像控制）
+    Replay（重放控制）
+    Search（记录搜索）
+除了「RemoteDiscovery」模块之外，每个模块都有各自的「服务地址」，客户端要使用这些模块接口之前，必须先知道对应模块的「服务地址」。
+
+//---- 编码流程
+怎样才能获取这些模块的「服务地址」呢？分两步：
+    利用WS-Discovery搜索到IPC，就能得知该设备「DeviceMgmt」模块的「服务地址」，我们称之为「设备服务地址」。
+    使用「设备服务地址」调用「DeviceMgmt」模块的GetCapabilities接口，就能获取到所有模块的「服务地址」。
+在我专栏前面的文章里，演示了，使用GetDeviceInformation获取设备基本信息，使用GetSystemDateAndTime和SetSystemDateAndTime对设备进行校时。这些都是「DeviceMgmt」模块的接口，使用「设备服务地址」就能搞定了，所以一直未涉及到GetCapabilities接口。
+
+但后续的文章中，会涉及到音视频流，会用到「Media」模块的接口，这时就得先用GetCapabilities获取模块的「服务地址」了。
+
+
+
+//================================================== 读取音视频流 ==================================================
+//---- 原理简介
+ONVIF规范中设备管理和控制部分所定义的接口均以Web Services的形式提供，而音视频流则通过RTP/RTSP进行。
+简单粗暴的理解：IPC的各种参数获取/配置都是通过ONVIF协议接口实现，而音视频流多媒体传输采用的是RTP/RTSP协议实现。
+要读取IPC的音视频流，概况起来是，先通过ONVIF接口获取IPC主/辅码流的RTSP地址，再利用FFmpeg接口（或其他开源方案）读取音视频流数据。
+
+//---- 编码流程
+    1. 通过「设备发现」，得到 「设备服务地址」。
+    2. 使用「设备服务地址」调用GetCapabilities接口，得到「媒体服务地址」。
+    3. 使用「媒体服务地址」调用GetProfiles接口，得到主次码流的「媒体配置信息」，其中包含ProfileToken。
+    4. 使用ProfileToken 调用GetStreamUri接口，得到主次码流的流媒体RTSP地址。
+    4. 使用RTSP地址，调用FFmpeg接口，读取音视频流数据。
+
+//---- VLC播放RTSP视频
+RTSP是很成熟的多媒体传输协议，用于传输音视频流数据。我们不需要自己码代码来实现RTSP协议，有很多现成的开源方案可供我们使用，比如强大的FFmpeg。
+可以直接使用VLC media player播放RTSP视频流。
+    1. 打开VLC media player播放器。
+    2. 选择菜单【媒体】>【打开网络串流】，输入RTSP地址，点击【播放】，即可实时播放视频流媒体，如下图所示。
+    3. 如果提示认证失败，那么URL就要加上用户名、密码，格式如：rtsp://username:password@100.100.100.5:554/av0_0
+
+
+//==================================================== 图像抓拍 ====================================================
+//---- 原理简介
+IPC图像抓拍有两种方法：
+    1. 对RTSP视频流进行视频截图；
+    2. 使用HTTP的GET方式获取图片。
+第一种方法没试过，没有发言权，以下介绍第二种方法。
+ONVIF协议除了提供RTSP的URL外，其实也给出了抓拍的URL，使用Media模块的GetSnapshotUri接口可获取图像抓拍的URL。
+比如，我从IPC获得的抓拍URL为：http://100.100.100.160/onvifsnapshot/media_service/snapshot?channel=1&subtype=0。
+那如何通过这个地址获得图片呢？其实在media.wsdl中，该接口的函数功能说明中已经描述的很清楚了：「The URI can be used for acquiring a JPEG image through a HTTP GET operation」，也就是通过HTTP的GET方式获得JPEG图片。
+在浏览器上输入抓拍的URL，在浏览器中就会显示出图片，刷新，图片会变化，对于需要验证的IPC，会要求我们输入用户名密码进行HTTP用户认证。
+
+//---- 编码流程
+    1. 通过「设备发现」，得到 「设备服务地址」。
+    2. 使用「设备服务地址」调用GetCapabilities接口，得到「媒体服务地址」。
+    3. 使用「媒体服务地址」调用GetProfiles接口，得到主次码流的「媒体配置信息」，其中包含ProfileToken。
+    4. 使用ProfileToken 调用GetSnapshotUri接口，得到主次码图像抓拍的URI地址。
+    5. 根据URI地址，使用HTTP的GET方式获取图片
+
+
+
+//=================================================== 修改分辨率 ===================================================
+//---- 原理简介
+IPC有关多媒体的参数，都是由媒体配置文件（media profile）来管理。想通过ONVIF协议修改IPC诸如分辨率这样的媒体参数，就得先弄懂媒体配置文件。
+媒体配置文件（media profile）是用于管理音视频流相关的一系列配置的集合，一个配置文件由一系列相关联的配置类实体构成。配置类包括：
+    Video source configuration（视频源配置）
+    Audio source configuration（音频源配置）
+    Video encoder configuration（视频编码器配置）
+    Audio encoder configuration（音频编码器配置）
+    PTZ configuration（PTZ配置）
+    Video analytics configuration（视频分析配置）
+    Metadata configuration（元数据配置）
+    Audio output configuration（音频输出配置）
+    Audio decoder configuration（音频解码器配置）
+
+对应的结构体为：
+struct tt__Profile {
+        char *Name;
+        struct tt__VideoSourceConfiguration *VideoSourceConfiguration;
+        struct tt__AudioSourceConfiguration *AudioSourceConfiguration;
+        struct tt__VideoEncoderConfiguration *VideoEncoderConfiguration;
+        struct tt__AudioEncoderConfiguration *AudioEncoderConfiguration;
+        struct tt__VideoAnalyticsConfiguration *VideoAnalyticsConfiguration;
+        struct tt__PTZConfiguration *PTZConfiguration;
+        struct tt__MetadataConfiguration *MetadataConfiguration;
+        struct tt__ProfileExtension *Extension;
+        char *token;
+        enum xsd__boolean *fixed;
+};
+
+一个tt__Profile结构体就是一个媒体配置文件，一个配置文件由全部的或部分的配置类实体组成，“部分”的意思是，对于不支持的功能（如PTZ），允许其配置信息为空（PTZConfiguration为NULL）。
+这里有一个概念一定要理清楚，配置类和实体的区别：
+    1. 一个设备可以有多个媒体配置文件，如主码流、辅码流就是两个不同的媒体配置文件。
+    2. 一个媒体配置文件由一些不同配置类的实体组成，同一配置类的不同实体，只能有一个实体跟媒体配置文件关联。
+    3. 就某个配置类而言，一个设备可以有多个实体。如「视频编码器配置」类，一个IPC设备至少包含两个「视频编码器配置」实体，分别关联主码流和辅码流，这两个「视频编码器配置」实体参数有所区别，如分辨率不同，码率不同等等。
+
+为了唯一标识某个配置实体，每个配置实体都有对应的唯一标识符token，很多的ONVIF媒体接口也是通过这些token来访问（修改）这些配置的。比如，视频源配置token、音频源配置token、视频编码器配置token，甚至连媒体配置文件本身都有token。如下图红色矩形框所示（GetProfiles接口）：
+
+//---- 函数接口
+对于某个具体的配置类，ONVIF都提供了一套完整的函数接口，类似如下：
+    AddXXXConfiguration：新增XXX配置
+    RemoveXXXConfiguration：删除指定的XXX配置
+    GetXXXConfigurations：获取所有的XXX配置
+    GetXXXConfiguration：获取指定的XXX配置
+    GetXXXConfigurationOptions：获取XXX配置选项集
+    GetCompatibleXXXConfigurations：获取所有兼容的XXX配置
+    SetXXXConfiguration：修改指定的XXX配置
+
+将XXX替换成VideoEncoder，就得到了「视频编码器配置」类相关的ONVIF接口，其他配置类也如此：
+    AddVideoEncoderConfiguration：新增视频编码器配置
+    RemoveVideoEncoderConfiguration：删除指定的视频编码器配置
+    GetVideoEncoderConfigurations：获取所有的视频编码器配置
+    GetVideoEncoderConfiguration：获取指定的视频编码器配置
+    GetVideoEncoderConfigurationOptions：获取视频编码器配置选项集
+    GetCompatibleVideoEncoderConfigurations：获取所有兼容的视频编码器配置
+    SetVideoEncoderConfiguration：修改指定的视频编码器配置
+
+「媒体配置文件」与「视频编码器配置」的关系：
+                                            ONVIF对应的函数接口                          备注
+    一个设备可以有多个「媒体配置文件」            GetProfile GetProfiles                     比如主码流、辅码流，是两个相互独立的媒体配置文件。每个媒体配置文件的token不同。
+    一个设备可以有多个「视频编码器配置」实体       GetVideoEncoderConfiguration GetVideoEncoderConfigurations   
+    一个「媒体配置文件」只能关联一个「视频编码器配置」实体  AddVideoEncoderConfiguration     
+    每个「视频编码器配置」实体独享属于自己的一套参数选项集  GetVideoEncoderConfigurationOptions    比如IPC的主码流， 视频分辨率只能设置为预先设定好的几个分辨率（选项集）中的一种， 不能随意配置。 可选择的分辨率是IPC出厂时就与设定好的，没法通过ONVIF接口增/删/改。 “独享”的意思， 就是视频编码器配置1的分辨率， 只能在视频编码器配置1中使用， 不能在视频编码器配置2中使用。 比如主码流的1080P分辨率， 不能配置到辅码流中。
+
+//---- 编码流程
+IPC客户端通过ONVIF修改分辨率的步骤如下：
+    1. 先通过GetProfiles获取所有媒体配置文件，可得知主/辅码流的视频编码器配置token；
+    2. 由视频编码器配置token通过SetVideoEncoderConfiguration修改视频编码器配置（如修改分辨率、帧率、码率等）；
+    3. 修改的参数必须在GetVideoEncoderConfigurationOptions中的选项集范围内（即IPC出厂时预设定好的那几个选项集），如分辨率只能设置为那几种中的一种，不能随意设置。否则SetVideoEncoderConfiguration会返回失败。
+    4. 每个视频编码器配置的分辨率可选集，只能自个使用，不能用于其他视频编码器配置中。比如主码流的1080P分辨率，不能配置到辅码流中，SetVideoEncoderConfiguration会调用失败。
+
+
+//==================================================== 遮挡报警 ====================================================
+具体参看博客： https://blog.csdn.net/benkaoya/article/details/78084227
+
+//---- 原理简介
+IPC摄像头往往带有告警功能，如移动侦测、遮挡报警等，这些告警会被描述为事件传给客户端，客户端再对各类事件分析处理并产生相应联动（如邮件通知、上传中心等）。本文将以“遮挡报警”功能为例，讲解ONVIF客户端如何检测IPC摄像头的告警功能。
+
+在「ONVIF Core Specification」规格说明书中（注：书稿时我参考的是「ONVIF-Core-Specification-v1612」版本，本文以下内容如果没有特别说明，ONVIF Core说的都是这个版本），其中一个章节「Event handling」规范了ONVIF事件处理。在开始之前，建议你先阅读下这部分规范。
+
+如果你对英文「过敏」，可以参考基于2013版「ONVIF-Core-Specification-v230」的中文翻译：https://github.com/jimxl/onvif-core-specification-cn.git
+
+ONVIF的事件处理标准并不是自己定义的，而是使用现成的OASIS的「WS-BaseNotification」和「WS-Topics」规范。WS-BaseNotification规范定义了消息订阅和通知操作、信息交互过程中的术语、概念、操作和交互语言的格式等，也定义了生产者和消费者的角色。WS-Topics规范定义了主题的概念来对事件进行组织和分类，并定义了对事件进行筛选的语法和表达式。有关这方面的规范，不在本文讨论范围内，你可以通过「WS-Notification」关键字在网上进行查阅了解更新信息。
+
+总的来说，根据ONVIF的事件处理规范，我们可以：
+    客户端通过ONVIF接口向IPC摄像头订阅感兴趣的事件主题。
+    一旦告警发生，IPC摄像头就会告警描述为事件消息通知客户端。
+
+根据ONVIF Core Specification规范，实现事件通知的方式有以下三种：
+    Basic Notification Interface
+    基本通知接口。这种方式要求IPC摄像机和客户端必须在同一网段，如果不在同一网段，事件通知消息将无法传输。这种方式的事件通知消息也无法穿越防火墙，这就要求即使是在生产阶段，用户也得关闭任何可能存在的防火墙机制。正因为存在诸多限制，这种方式在实际中很少被使用。
+
+    Real-time Pull-Point Notification Interface
+    实时拉点通知接口。因为更好的防火墙穿透能力，Pull-Point方式更受推荐，基本上所有的IPC摄像机供应商都支持这种方式。这种方式是本文重点讲解的内容。
+
+    Notification Streaming Interface
+    通知流接口。这种方式将事件消息通过RTP流数据包的方式通知客户端，但是书稿时，很少有供应商支持这种方式，本文将不做介绍。

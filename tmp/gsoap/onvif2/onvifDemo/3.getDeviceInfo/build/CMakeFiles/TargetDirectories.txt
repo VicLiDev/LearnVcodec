@@ -1,0 +1,14 @@
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/CMakeFiles/rebuild_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/CMakeFiles/edit_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/onvif/CMakeFiles/rebuild_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/onvif/CMakeFiles/onvif.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/onvif/CMakeFiles/edit_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/comm/CMakeFiles/rebuild_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/comm/CMakeFiles/comm.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/comm/CMakeFiles/edit_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/discovery/CMakeFiles/rebuild_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/discovery/CMakeFiles/discovery.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/discovery/CMakeFiles/edit_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/deviceinfo/CMakeFiles/rebuild_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/deviceinfo/CMakeFiles/deviceinfo.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/3.getDeviceInfo/build/deviceinfo/CMakeFiles/edit_cache.dir

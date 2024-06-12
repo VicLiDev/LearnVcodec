@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../lib/libcomm.a  CMakeFiles/comm.dir/onvif_comm.c.o CMakeFiles/comm.dir/onvif_dump.c.o
+/usr/bin/ranlib ../lib/libcomm.a

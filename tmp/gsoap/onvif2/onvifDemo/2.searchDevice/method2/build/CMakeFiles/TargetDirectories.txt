@@ -1,0 +1,11 @@
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/CMakeFiles/rebuild_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/CMakeFiles/edit_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/onvif/CMakeFiles/rebuild_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/onvif/CMakeFiles/onvif.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/onvif/CMakeFiles/edit_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/comm/CMakeFiles/rebuild_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/comm/CMakeFiles/comm.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/comm/CMakeFiles/edit_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/discovery/CMakeFiles/rebuild_cache.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/discovery/CMakeFiles/discovery.dir
+/home/administrator/Projects/MasterPrj/source/MasterPrj/Demo_and_test/gsoap/onvif2/onvifDemo/2.searchDevice/method2/build/discovery/CMakeFiles/edit_cache.dir

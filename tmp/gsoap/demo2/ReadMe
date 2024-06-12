@@ -1,0 +1,18 @@
+demo 地址： https://www.genivia.com/doc/guide/html/index.html
+用户开发手册： https://www.onvif.org/wp-content/uploads/2016/12/ONVIF_WG-APG-Application_Programmers_Guide-1.pdf
+
+顺序使用过的指令：
+//-- C++
+wsdl2h -s -o calc.h http://www.genivia.com/calc.wsdl
+soapcpp2 -j -C -I ~/Downloads/gsoap-2.8/gsoap/import/ calc.h
+加入 stdsoap2.h stdsoap2.cpp calcclient.cpp文件(已经放在source文件夹中)
+g++ -o calcclient calcclient.cpp soapcalcProxy.cpp soapC.cpp stdsoap2.cpp
+./calcclient
+
+//-- pure C application
+wsdl2h -c -o calc.h http://www.genivia.com/calc.wsdl
+soapcpp2 -C -I ~/Downloads/gsoap-2.8/gsoap/import/ calc.h
+加入 stdsoap2.h stdsoap2.c calcclient.c文件(已经放在source文件夹中)
+这里网页提供的calcclient.c文件有问题，修改过的已经放在source文件夹中
+gcc -o calcclient calcclient.c soapClient.c soapC.c stdsoap2.c
+./calcclient

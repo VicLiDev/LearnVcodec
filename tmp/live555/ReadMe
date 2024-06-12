@@ -1,0 +1,6 @@
+推流服务
+https://www.cnblogs.com/dpf-10/p/5623101.html
+可以使用vlc播放器看到推流效果,播放器安装: sudo apt-get install vlc
+
+linux下live555的安装测试(更上边那个差不多)
+https://blog.csdn.net/weixin_39371711/article/details/80520533

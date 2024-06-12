@@ -1,0 +1,23 @@
+gsoap 基础demo： https://www.cnblogs.com/dkblog/archive/2011/08/19/2145942.html
+说明：这里的demo有少量需要修改的部分，根据错误提示可以独立解决，可用的demo放在当前路径下，并附有相关说明
+
+demo2 算是一个官方的demo： https://www.genivia.com/doc/guide/html/index.html
+
+onvif 使用gsoap生成的onvif框架，框架已经正常生成，但是还未完善demo
+
+一个看上去不错的博客，但是未测试过是否可行：http://www.voidcn.com/article/p-guyczwtj-bqc.html
+
+gsoap入门用法： https://blog.csdn.net/yuchunhai321/article/details/82351012
+
+生成onvif代码框架： https://blog.csdn.net/u010871058/article/details/71403962
+这里可能会遇到一个版本兼容的问题：
+wsa5.h(289): **ERROR**: service operation name clash: struct/class 'SOAP_ENV__Fault' already declared at wsa.h:274
+原因及解决方法：https://sourceforge.net/p/gsoap2/bugs/999/
+    This is not a bug, it is caused by a WS-Addressing version mismatch.
+    Please see the imported file dependencies:
+    #import "wsa.h" (imported via wsdd10.h) is not compatible with #import "wsa5.h" and will lead to a redefinition.
+    Replace "wsdd10.h" with "wsdd.h" in onvif.h.
+    This will upgrade the WSDD protocol to 2009. If that is a problem, you will need to change "wsdd10.h" to import "wsa5.h" and change all occurrences of wsa__ to wsa5__.
+    For convenience, a wsdd5.h import will be included in the upcoming release, so you can simply choose between wsdd5.h (which imports wsa5.h) and wsdd10.h (which imports wsa.h).
+
+另外，雄迈官网有提供sdk及相应工具
