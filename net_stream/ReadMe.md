@@ -132,7 +132,10 @@ rtsp://localhost:8554/mystream: RTSP 流的地址和端口。
 
 拉流
 ```
-vlc --network-caching=50 rtsp://localhost:8554/mystream
+vlc播放网络流： rtsp://localhost:8556/mystream
+
+ffplay rtsp://192.168.7.233:8556/mystream
+ffplay rtmp://192.168.7.233:1935/mystream
 ```
 
 ### RtspSimpleServer
