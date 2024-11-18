@@ -2,6 +2,11 @@ h264/JM/bin/ldecod.exe
 h264/JM/bin/lencod.exe
 h264/JM/bin/rtp_loss.exe
 h264/JM/bin/rtpdump.exe
+h264/JM/bin/ldecod.dbg.exe
+h264/JM/bin/lencod.dbg.exe
+h264/JM/bin/rtp_loss.dbg.exe
+h264/JM/bin/rtpdump.dbg.exe
+h264/JM/bin/test_dec.yuv
 h264/JM/ldecod/dependencies
 h264/JM/ldecod/obj/
 h264/JM/lencod/dependencies
@@ -10,6 +15,8 @@ h264/JM/rtp_loss/dependencies
 h264/JM/rtp_loss/obj/
 h264/JM/rtpdump/dependencies
 h264/JM/rtpdump/obj/
+h264/JM/test_dec.yuv
+
 avs2/RD17.0/build/linux/ldecod/dependencies
 avs2/RD17.0/build/linux/ldecod/obj/
 avs2/RD17.0/build/linux/ldecod/tags
@@ -20,3 +27,4 @@ avs2/RD17.0/source/bin/ldecod.exe
 avs2/RD17.0/source/bin/lencod.exe
 jpeg/ijg_jpeg-9f/Lbuild/
 jpeg/libjpeg_jpeg-6b/Lbuild/
+

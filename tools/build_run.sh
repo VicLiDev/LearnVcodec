@@ -5,54 +5,37 @@ clear
 # single run cmd
 sig_vvc_run=""
 
-sig_hevc_run="../bin/MCTSExtractorStatic       "
-sig_hevc_run="../bin/MCTSExtractorStaticd      "
-sig_hevc_run="../bin/parcatStatic              "
-sig_hevc_run="../bin/parcatStaticd             "
-sig_hevc_run="../bin/SEIFilmGrainAppStatic     "
-sig_hevc_run="../bin/SEIFilmGrainAppStaticd    "
-sig_hevc_run="../bin/SEIRemovalAppStatic       "
-sig_hevc_run="../bin/SEIRemovalAppStaticd      "
-sig_hevc_run="../bin/TAppDecoderAnalyserStatic "
-sig_hevc_run="../bin/TAppDecoderAnalyserStaticd"
-sig_hevc_run="../bin/TAppDecoderStatic         "
-sig_hevc_run="../bin/TAppDecoderStaticd        "
-sig_hevc_run="../bin/TAppEncoderStatic         "
-sig_hevc_run="../bin/TAppEncoderStaticd        "
+# exe:
+# ../bin/MCTSExtractorStatic  ../bin/MCTSExtractorStaticd   ../bin/parcatStatic
+# ../bin/parcatStaticd        ../bin/SEIFilmGrainAppStatic  ../bin/SEIFilmGrainAppStaticd
+# ../bin/SEIRemovalAppStatic  ../bin/SEIRemovalAppStaticd   ../bin/TAppDecoderAnalyserStatic
+# ../bin/TAppDecoderStatic    ../bin/TAppDecoderStaticd     ../bin/TAppEncoderStatic
+# ../bin/TAppEncoderStaticd   ../bin/TAppDecoderAnalyserStaticd
+sig_hevc_run="../bin/TAppDecoderStaticd"
 
-sig_avc_run="bin/ldecod.exe  "
-sig_avc_run="bin/lencod.exe  "
-sig_avc_run="bin/rtpdump.exe "
-sig_avc_run="bin/rtp_loss.exe"
+# exe:
+# bin/ldecod.exe      bin/lencod.exe      bin/rtp_loss.exe     bin/rtpdump.exe
+# bin/ldecod.dbg.exe  bin/lencod.dbg.exe  bin/rtp_loss.dbg.exe bin/rtpdump.dbg.exe
+sig_avc_run="bin/ldecod.dbg.exe"
 
+# exe:
+# ../../source/bin/ldecod.exe  ../../source/bin/lencod.exe
 sig_avs2_run="../../source/bin/ldecod.exe"
-sig_avs2_run="../../source/bin/lencod.exe"
 
+# exe:
+# aomdec aomenc test_aom_rc test_intra_pred_speed test_libaom tools/dump_obu
 sig_av1_run="./aomdec -o output.yuv ${HOME}/test/testStrms/Sintel_360_10s_1MB.ivf"
-sig_av1_run="aomdec               "
-sig_av1_run="aomenc               "
-sig_av1_run="test_aom_rc          "
-sig_av1_run="test_intra_pred_speed"
-sig_av1_run="test_libaom          "
-sig_av1_run="tools/dump_obu       "
 
-sig_vp9_run="test_intra_pred_speed"
-sig_vp9_run="test_libvpx          "
-sig_vp9_run="test_rc_interface    "
-sig_vp9_run="vpxdec               "
-sig_vp9_run="vpxenc               "
+# exe:
+# test_intra_pred_speed test_libvpx test_rc_interface vpxdec vpxenc
+sig_vp9_run="vpxdec"
 
-sig_jpg1_run="cjpeg   "
-sig_jpg1_run="djpeg   "
-sig_jpg1_run="jpegtran"
-sig_jpg1_run="libtool "
-sig_jpg1_run="rdjpgcom"
+# exe:
+# cjpeg djpeg jpegtran libtool rdjpgcom wrjpgcom
 sig_jpg1_run="wrjpgcom"
 
-sig_jpg2_run="cjpeg   "
-sig_jpg2_run="djpeg   "
-sig_jpg2_run="jpegtran"
-sig_jpg2_run="rdjpgcom"
+# exe:
+# cjpeg djpeg jpegtran rdjpgcom wrjpgcom
 sig_jpg2_run="wrjpgcom"
 
 # ============ base ============
@@ -133,6 +116,7 @@ function cdDir()
     esac
 
     create_dir ${workDir} && cd ${workDir} || { echo "dir ${workDir} is not exist"; exit 0;}
+    echo "work dir: ${workDir}"
 }
 
 function build()
@@ -143,14 +127,14 @@ function build()
     case ${cur_prot} in
         vvc)  ;;
         hevc) rm -rf ./*; cmake -DCMAKE_BUILD_TYPE=Debug ..; make -j ;;
-        avc)  make clean; make CFLAGS=-fcommon -j ;;
+        avc)  make clean; make CFLAGS="-fcommon -g" -j ;;
         avs2)
             bash ./clean.sh
-            make CFLAGS=-fcommon CC=gcc-9 CXX=g++-9 -j 10 -C ldecod
-            make CFLAGS=-fcommon CC=gcc-9 CXX=g++-9 -j 10 -C lencod
+            make CFLAGS="-fcommon -g" CC=gcc-9 CXX=g++-9 -j 10 -C ldecod
+            make CFLAGS="-fcommon -g" CC=gcc-9 CXX=g++-9 -j 10 -C lencod
             ;;
         av1)  rm -rf ./*; cmake -DCMAKE_BUILD_TYPE=Debug ..; make ;;
-        vp9)  rm -rf ./*; ../configure; make -j 10 ;;
+        vp9)  rm -rf ./*; ../configure --enable-debug --disable-optimizations; make -j 10 ;;
         jpg1) rm -rf ./*; ../configure; make -j 10 ;;
         jpg2) rm -rf ./*; dos2unix ../configure; ../configure; make -j 10 ;;
         *)    echo "unsupport prot: $1"; help ;;
@@ -177,8 +161,8 @@ function run()
     esac
 
     eval runCmd='$'${cur_prot}Cmd
+    echo "sigle test cmd: ${runCmd}"
     [ "${need_dbg}" == true ] && gdb --command=debug.gdb --args ${runCmd} || ${runCmd}
-
     echo "sigle test cmd: ${runCmd}"
 }
 
