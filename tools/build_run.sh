@@ -50,7 +50,7 @@ echo "curPath: $curPath"
 echo "curDir: $curDir"
 echo "============> path <============"
 
-cmd_prot="null"
+cmd_spec="null"
 cmd_build=false
 cmd_sig_test=false
 cmd_batch_test=false
@@ -58,8 +58,8 @@ cmd_debug=false
 
 function help()
 {
-    echo "usage: build_run.sh <-p prot> <-b|-r|-bt> [<-gdb>]"
-    echo "    -p:   prot, vvc|hevc|avc|avs2|av1|vp9|jpg1|jpg2"
+    echo "usage: build_run.sh <-s spec> <-b|-r|-bt> [<-gdb>]"
+    echo "    -s:   spec, vvc|hevc|avc|avs2|av1|vp9|jpg1|jpg2"
     echo "    -b:   build"
     echo "    -r:   run single test"
     echo "    -bt:  batch test"
@@ -71,7 +71,7 @@ function procParas()
     while [[ $# -gt 0 ]]; do
         key="$1"
         case ${key} in
-            -p)   cmd_prot=${2}; shift ;;
+            -s)   cmd_spec=${2}; shift ;;
             -b)   cmd_build=true ;;
             -r)   cmd_sig_test=true ;;
             -bt)  cmd_batch_test=true ;;
@@ -83,10 +83,10 @@ function procParas()
     done
 
 
-    [ $cmd_prot == "null" ] && { echo "Error: prot is null"; help; exit;}
+    [ $cmd_spec == "null" ] && { echo "Error: spec is null"; help; exit;}
 
     echo "============> cmd <============"
-    echo "prot:       ${cmd_prot}"
+    echo "spec:       ${cmd_spec}"
     echo "build:      ${cmd_build}"
     echo "sig_test:   ${cmd_sig_test}"
     echo "batch_test: ${cmd_batch_test}"
@@ -112,7 +112,7 @@ function cdDir()
         vp9)  workDir="${rootPath}/vp9/libvpx/Lbuild" ;;
         jpg1) workDir="${rootPath}/jpeg/ijg_jpeg-9f/Lbuild" ;;
         jpg2) workDir="${rootPath}/jpeg/libjpeg_jpeg-6b/Lbuild" ;;
-        *)    echo "unsupport prot: $1"; help ;;
+        *)    echo "unsupport spec: $1"; help ;;
     esac
 
     create_dir ${workDir} && cd ${workDir} || { echo "dir ${workDir} is not exist"; exit 0;}
@@ -121,10 +121,10 @@ function cdDir()
 
 function build()
 {
-    cur_prot=$1
-    cdDir $cur_prot
+    cur_spec=$1
+    cdDir $cur_spec
 
-    case ${cur_prot} in
+    case ${cur_spec} in
         vvc)  ;;
         hevc) rm -rf ./*; cmake -DCMAKE_BUILD_TYPE=Debug ..; make -j ;;
         avc)  make clean; make CFLAGS="-fcommon -g" -j ;;
@@ -137,18 +137,18 @@ function build()
         vp9)  rm -rf ./*; ../configure --enable-debug --disable-optimizations; make -j 10 ;;
         jpg1) rm -rf ./*; ../configure; make -j 10 ;;
         jpg2) rm -rf ./*; dos2unix ../configure; ../configure; make -j 10 ;;
-        *)    echo "unsupport prot: $1"; help ;;
+        *)    echo "unsupport spec: $1"; help ;;
     esac
 }
 
 function run()
 {
-    cur_prot=$1
+    cur_spec=$1
     need_dbg=$2
-    cdDir $cur_prot
+    cdDir $cur_spec
 
-    cur_prot=$1
-    case ${cur_prot} in
+    cur_spec=$1
+    case ${cur_spec} in
         vvc)  ;;
         hevc) hevcCmd=${sig_hevc_run} ;;
         avc)  avcCmd=${sig_avc_run}  ;;
@@ -157,10 +157,10 @@ function run()
         vp9)  vp9Cmd=${sig_vp9_run}  ;;
         jpg1) jpg1_Cmd=${sig_jpg1_run} ;;
         jpg2) jpg2_Cmd=${sig_jpg2_run} ;;
-        *)    echo "unsupport prot: $1"; help ;;
+        *)    echo "unsupport spec: $1"; help ;;
     esac
 
-    eval runCmd='$'${cur_prot}Cmd
+    eval runCmd='$'${cur_spec}Cmd
     echo "sigle test cmd: ${runCmd}"
     [ "${need_dbg}" == true ] && gdb --command=debug.gdb --args ${runCmd} || ${runCmd}
     echo "sigle test cmd: ${runCmd}"
@@ -168,14 +168,14 @@ function run()
 
 function run_batch()
 {
-    cur_prot=$1
-    cdDir $cur_prot
+    cur_spec=$1
+    cdDir $cur_spec
 
     echo "need finish"
     return 0
 
-    cur_prot=$1
-    case ${cur_prot} in
+    cur_spec=$1
+    case ${cur_spec} in
         hevc) hevcCmd="" ;;
         avc)  avcCmd=""  ;;
         avs2) avs2Cmd="" ;;
@@ -183,10 +183,10 @@ function run_batch()
         vp9)  vp9Cmd=""  ;;
         jpg1) jpg1Cmd="" ;;
         jpg2) jpg2Cmd="" ;;
-        *)    echo "unsupport prot: $1"; help ;;
+        *)    echo "unsupport spec: $1"; help ;;
     esac
 
-    eval runCmd='$'${cur_prot}Cmd
+    eval runCmd='$'${cur_spec}Cmd
     [ "${need_dbg}" == true ] && gdb --command=debug.gdb --args ${runCmd} || ${runCmd}
 
     echo "batch test cmd: ${runCmd}"
@@ -196,9 +196,9 @@ function main()
 {
     procParas $@
     
-    [ ${cmd_build} == true ] && build ${cmd_prot}
-    [ ${cmd_sig_test} == true ] && run ${cmd_prot} ${cmd_debug}
-    [ ${cmd_batch_test} == true ] && run_batch ${cmd_prot}
+    [ ${cmd_build} == true ] && build ${cmd_spec}
+    [ ${cmd_sig_test} == true ] && run ${cmd_spec} ${cmd_debug}
+    [ ${cmd_batch_test} == true ] && run_batch ${cmd_spec}
 }
 
 # ============ main ============
