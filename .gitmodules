@@ -7,3 +7,18 @@
 [submodule "vp9/libvpx"]
 	path = vp9/libvpx
 	url = https://chromium.googlesource.com/webm/libvpx
+[submodule "jpeg/libjpeg"]
+	path = jpeg/libjpeg
+	url = https://github.com/LuaDist/libjpeg
+[submodule "jpeg/libjpeg-turbo"]
+	path = jpeg/libjpeg-turbo
+	url = https://github.com/libjpeg-turbo/libjpeg-turbo
+[submodule "jpeg/mozjpeg"]
+	path = jpeg/mozjpeg
+	url = https://github.com/mozilla/mozjpeg
+[submodule "jpeg/openjpeg"]
+	path = jpeg/openjpeg
+	url = https://github.com/uclouvain/openjpeg
+[submodule "jpeg/jpeginfo"]
+	path = jpeg/jpeginfo
+	url = https://github.com/tjko/jpeginfo
