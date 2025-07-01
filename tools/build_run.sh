@@ -161,8 +161,10 @@ function run()
     esac
 
     eval runCmd='$'${cur_spec}Cmd
+    echo "pwd: $(pwd)"
     echo "sigle test cmd: ${runCmd}"
     [ "${need_dbg}" == true ] && gdb --command=debug.gdb --args ${runCmd} || ${runCmd}
+    echo "pwd: $(pwd)"
     echo "sigle test cmd: ${runCmd}"
 }
 
