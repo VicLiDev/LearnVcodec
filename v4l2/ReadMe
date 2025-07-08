@@ -1,8 +1,0 @@
-抓取程序已经测试过,没有问题,抓到的是YUYV存储格式的YUV文件,采样方式为YUV4:2:2
-如果想将YUV文件转化成JPG文件需要使用 YUYV422TORGB.cpp ,这个程序可以转化成功,但是会产生段错误,没有查找具体原因
-
-程序 YUV2RGB_OpenCV.cpp 应该不是针对 YUYV存储格式的转换,具体没有探究
-
-官方demo使用方法:
-gcc -o offcial official_demo.c
-./official -d /dev/video0 -o >> off.yuv  #我个人的笔记本使用格式:YUYV:422 640x480  存在一个问题,图片上半部分是上一帧,下半部分是这一帧,后来不知道为什么好了
