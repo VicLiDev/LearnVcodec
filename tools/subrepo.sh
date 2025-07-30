@@ -11,6 +11,8 @@
 git submodule add https://aomedia.googlesource.com/aom av1/aom
 git submodule add https://vcgit.hhi.fraunhofer.de/jvet/HM.git h265/HM
 git submodule add https://chromium.googlesource.com/webm/libvpx vp9/libvpx
+git submodule add https://github.com/pkuvcl/davs2.git avs2/davs2
+git submodule add https://github.com/pkuvcl/xavs2.git avs2/xavs2
 git submodule add https://github.com/LuaDist/libjpeg jpeg/libjpeg
 git submodule add https://github.com/libjpeg-turbo/libjpeg-turbo jpeg/libjpeg-turbo
 git submodule add https://github.com/mozilla/mozjpeg jpeg/mozjpeg

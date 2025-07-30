@@ -22,3 +22,9 @@
 [submodule "jpeg/jpeginfo"]
 	path = jpeg/jpeginfo
 	url = https://github.com/tjko/jpeginfo
+[submodule "avs2/davs2"]
+	path = avs2/davs2
+	url = https://github.com/pkuvcl/davs2.git
+[submodule "avs2/xavs2"]
+	path = avs2/xavs2
+	url = https://github.com/pkuvcl/xavs2.git

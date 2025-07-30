@@ -23,6 +23,12 @@ sig_avc_run="bin/ldecod.dbg.exe"
 sig_avs2_run="../../source/bin/ldecod.exe"
 
 # exe:
+sig_davs2_run="./davs2"
+
+# exe:
+sig_xavs2_run="./xavs2"
+
+# exe:
 # aomdec aomenc test_aom_rc test_intra_pred_speed test_libaom tools/dump_obu
 sig_av1_run="./aomdec -o output.yuv ${HOME}/test/testStrms/Sintel_360_10s_1MB.ivf"
 
@@ -59,7 +65,7 @@ cmd_debug=false
 function help()
 {
     echo "usage: build_run.sh <-s spec> <-b|-r|-bt> [<-gdb>]"
-    echo "    -s:   spec, vvc|hevc|avc|avs2|av1|vp9|jpg1|jpg2"
+    echo "    -s:   spec, vvc|hevc|avc|avs2|davs2|xavs2|av1|vp9|jpg1|jpg2"
     echo "    -b:   build"
     echo "    -r:   run single test"
     echo "    -bt:  batch test"
@@ -108,6 +114,8 @@ function cdDir()
         hevc) workDir="${rootPath}/h265/HM/Lbuild" ;;
         avc)  workDir="${rootPath}/h264/JM" ;;
         avs2) workDir="${rootPath}/avs2/RD17.0/build/linux" ;;
+        davs2) workDir="${rootPath}/avs2/davs2/build/linux" ;;
+        xavs2) workDir="${rootPath}/avs2/xavs2/build/linux" ;;
         av1)  workDir="${rootPath}/av1/aom/Lbuild" ;;
         vp9)  workDir="${rootPath}/vp9/libvpx/Lbuild" ;;
         jpg1) workDir="${rootPath}/jpeg/ijg_jpeg-9f/Lbuild" ;;
@@ -133,6 +141,12 @@ function build()
             make CFLAGS="-fcommon -g" CC=gcc-9 CXX=g++-9 -j 10 -C ldecod
             make CFLAGS="-fcommon -g" CC=gcc-9 CXX=g++-9 -j 10 -C lencod
             ;;
+        davs2)
+            ./configure --enable-pic && make -j$(nproc)
+            ;;
+        xavs2)
+            ./configure --enable-pic && make -j$(nproc)
+            ;;
         av1)  rm -rf ./*; cmake -DCMAKE_BUILD_TYPE=Debug ..; make ;;
         vp9)  rm -rf ./*; ../configure --enable-debug --disable-optimizations; make -j 10 ;;
         jpg1) rm -rf ./*; ../configure; make -j 10 ;;
@@ -153,6 +167,8 @@ function run()
         hevc) hevcCmd=${sig_hevc_run} ;;
         avc)  avcCmd=${sig_avc_run}  ;;
         avs2) avs2Cmd=${sig_avs2_run} ;;
+        davs2) davs2Cmd=${sig_davs2_run} ;;
+        xavs2) xavs2Cmd=${sig_xavs2_run} ;;
         av1)  av1Cmd=${sig_av1_run} ;;
         vp9)  vp9Cmd=${sig_vp9_run}  ;;
         jpg1) jpg1_Cmd=${sig_jpg1_run} ;;
